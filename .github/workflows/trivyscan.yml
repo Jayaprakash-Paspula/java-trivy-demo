@@ -9,29 +9,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Set up JDK
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: temurin
+          java-version: 17
 
-      - name: Build with Maven
+      - name: Build Java application
         run: mvn clean package
 
-      - name: Build Docker Image
+      - name: Build Docker image
         run: docker build -t java-trivy-demo:latest .
 
-      - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@v0.24.0
+      # Cache Trivy vulnerability database
+      - name: Cache Trivy DB
+        uses: actions/cache@v4
         with:
-          image-ref: 'java-trivy-demo:latest'
-          format: 'table'
-          exit-code: '1'
-          severity: 'HIGH,CRITICAL'
+          path: ~/.cache/trivy
+          key: trivy-db
 
+      # Run Trivy Scan
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@v0.28.0
+        with:
+          image-ref: java-trivy-demo:latest
+          format: table
+          output: trivy-report.txt
+          exit-code: 1
+          severity: HIGH,CRITICAL
+
+      # Upload report as pipeline artifact
       - name: Upload Trivy Report
         uses: actions/upload-artifact@v4
         with:
